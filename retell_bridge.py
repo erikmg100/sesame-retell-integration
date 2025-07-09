@@ -168,13 +168,10 @@ class ConversationFlow:
             case_type = self.identify_case_type(user_input)
             
             if case_type == "personal_injury":
-                # If they already mentioned the case type
-                if any(word in user_lower for word in ['accident', 'injured', 'car', 'truck']):
-                    self.current_state[call_id] = self.states["collecting_info"]
-                    self.collected_info[call_id]["case_type"] = "personal_injury"
-                    return "Okay got it so to confirm, you are calling about a personal injury matter, right?"
-                else:
-                    return "We appreciate you calling us at Tona Law. What kind of matter can I assist you with?"
+                # If they already mentioned the case type, confirm and move to collecting info
+                self.current_state[call_id] = self.states["collecting_info"]
+                self.collected_info[call_id]["case_type"] = "personal_injury"
+                return "Okay got it so to confirm, you are calling about a personal injury matter, right?"
             elif case_type == "no_fault":
                 self.current_state[call_id] = self.states["collecting_info"]
                 self.collected_info[call_id]["case_type"] = "no_fault"
@@ -185,6 +182,23 @@ class ConversationFlow:
             else:
                 return "We appreciate you calling us at Tona Law. What kind of matter can I assist you with?"
         
+        # Identifying caller / confirming case type
+        elif state == self.states["identifying_caller"]:
+            case_type = self.identify_case_type(user_input)
+            
+            if case_type == "personal_injury" or "yes" in user_lower or "yeah" in user_lower:
+                self.current_state[call_id] = self.states["collecting_info"]
+                self.collected_info[call_id]["case_type"] = "personal_injury"
+                return "Perfect! Let me start by getting your first and last name. Do you mind spelling your full name slowly and clearly for me?"
+            elif case_type == "no_fault":
+                self.current_state[call_id] = self.states["collecting_info"]
+                self.collected_info[call_id]["case_type"] = "no_fault"
+                return "Great! What is the name of your practice?"
+            elif case_type == "outside_practice":
+                self.current_state[call_id] = self.states["outside_practice_area"]
+                return "I appreciate you calling us, but we actually don't handle these types of cases. I recommend you contact a law firm that specializes in that area. Is there anything else I can help you with?"
+            else:
+                return "We appreciate you calling us at Tona Law. What kind of matter can I assist you with?"
         # Collecting basic information
         elif state == self.states["collecting_info"]:
             if "case_type" not in self.collected_info[call_id]:
