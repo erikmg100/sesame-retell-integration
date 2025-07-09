@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Simplified Retell AI Bridge with SesameAI Voice Presence Principles
-No heavy dependencies - focuses on voice presence enhancement
+Gabbi - Tona Law AI Intake Agent
+Enhanced with SesameAI Voice Presence Technology
 """
 
 import asyncio
@@ -19,406 +19,494 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # FastAPI app
-app = FastAPI(title="SesameAI + Retell Bridge", version="1.0.0")
+app = FastAPI(title="Gabbi - Tona Law AI Intake Agent", version="1.0.0")
 
-class SesameVoicePresenceEngine:
-    """
-    Simplified voice presence engine based on SesameAI principles
-    No external dependencies - pure voice enhancement logic
-    """
+class TonaLawKnowledgeBase:
+    """Tona Law specific knowledge and information"""
+    
+    COMPANY_INFO = {
+        "name": "Tona Law",
+        "address": "152 Islip Ave Suite 18, Islip, NY 11751",
+        "address_spoken": "Our office is located at one fifty two islip avenue in suite eighteen in Islip new york. If you'd like me to text you directions, please let me know.",
+        "founder": "Attorney Thomas Tona",
+        "attorneys": ["Thomas Tona", "Gary Axisa", "Raafat Toss", "Darby A. Singh"],
+        "practice_areas": ["personal injury", "no-fault collection"]
+    }
+    
+    CASE_TYPES = [
+        "car accidents", "truck accident", "motorcycle accident", "bus accident",
+        "DUI/DWI Victim Accident", "hit and run accidents", "uninsured motorist accident",
+        "rideshare accident", "bicycle accident", "slip and fall accidents",
+        "trip and fall accident", "bar and nightclub injuries", "construction accidents",
+        "municipality accidents", "negligent security cases",
+        "brain injury cases", "bone fractures", "wrongful death", "spinal cord injuries",
+        "amputations", "severe burns"
+    ]
+    
+    FAQS = {
+        "do i have a case": "Whether your situation qualifies as a personal injury case depends on the details of your incident. If you've been injured due to someone else's negligence, you may have a valid claim. I can gather more information now to evaluate your case.",
+        "how much is my case worth": "The value of your case depends on factors like medical expenses, lost wages, pain and suffering, and the extent of your injuries. I can discuss your situation in more detail to provide an initial estimate.",
+        "how much does it cost": "We work on a contingency fee basis, meaning you pay nothing upfront. We only get paid if you win your case, with fees typically a percentage of your settlement or award. I can explain this further.",
+        "how long will my case take": "The timeline for resolving a personal injury case varies based on its complexity, the extent of your injuries, and whether it settles or goes to trial. Simple cases may take months, while others could take a year or more. I'll keep you updated throughout the process.",
+        "what should i do next": "Seek medical care for your injuries, document everything like photos, medical records, and receipts, and avoid speaking with insurance adjusters before I advise you. I can guide you on the next steps right now."
+    }
+
+class GabbiPersonality:
+    """Gabbi's personality and voice presence traits"""
+    
+    TRAITS = {
+        "warm": True,
+        "empathetic": True,
+        "expressive": True,
+        "outgoing": True,
+        "helpful": True,
+        "human_like": True,
+        "patient": True,
+        "caring": True
+    }
+    
+    @staticmethod
+    def add_empathy_markers(text: str, context: str = "") -> str:
+        """Add empathetic responses based on context"""
+        context_lower = context.lower()
+        
+        if any(word in context_lower for word in ['accident', 'injured', 'hurt', 'pain']):
+            empathy_phrases = [
+                "I'm so sorry to hear that happened to you",
+                "That sounds really difficult",
+                "I can only imagine how that must feel",
+                "That must have been scary"
+            ]
+            # Choose empathy phrase based on context
+            phrase_index = hash(context) % len(empathy_phrases)
+            empathy = empathy_phrases[phrase_index]
+            return f"{empathy}. {text}"
+            
+        if any(word in context_lower for word in ['severe', 'serious', 'hospital', 'surgery']):
+            return f"Oh my gosh, that sounds awful I'm sorry. {text}"
+            
+        return text
+    
+    @staticmethod
+    def add_conversational_markers(text: str) -> str:
+        """Add Gabbi's natural speech patterns"""
+        # Replace "I'm" pronunciation guidance
+        text = text.replace("I'm", "I'm")  # Keep as I'm in transcript
+        
+        # Add natural pauses and flow
+        text = text.replace('. ', '... ')
+        
+        # Add encouraging markers
+        if len(text) > 80:
+            encouraging_phrases = [
+                "you made the right call",
+                "I'm here to help you through this",
+                "we're going to take good care of you"
+            ]
+            if not any(phrase in text.lower() for phrase in encouraging_phrases):
+                phrase_index = len(text) % len(encouraging_phrases)
+                encouragement = encouraging_phrases[phrase_index]
+                text = f"{text} And {encouragement}."
+                
+        return text
+
+class ConversationFlow:
+    """Manages the conversation flow and state"""
     
     def __init__(self):
-        self.conversation_memory: Dict[str, List] = {}
+        self.states = {
+            "initial_greeting": 0,
+            "identifying_caller": 1,
+            "collecting_info": 2,
+            "qualifying_personal_injury": 3,
+            "qualifying_no_fault": 4,
+            "qualified_ready_transfer": 5,
+            "not_qualified": 6,
+            "outside_practice_area": 7
+        }
+        
+        self.current_state = {}  # Track state per call_id
+        self.collected_info = {}  # Track collected info per call_id
+    
+    def get_initial_greeting(self) -> str:
+        return "Hi, this is Gabbi, the AI receptionist at TonaLaw. How can I help you?"
+    
+    def identify_case_type(self, user_input: str) -> str:
+        """Identify if this is personal injury, no-fault, or outside practice area"""
+        user_lower = user_input.lower()
+        
+        # Check for personal injury keywords
+        pi_keywords = ['accident', 'injured', 'hurt', 'car', 'truck', 'motorcycle', 'slip', 'fall', 'crash']
+        if any(keyword in user_lower for keyword in pi_keywords):
+            return "personal_injury"
+            
+        # Check for no-fault collection keywords
+        nf_keywords = ['no fault', 'no-fault', 'insurance', 'practice', 'healthcare', 'provider', 'denied', 'benefits']
+        if any(keyword in user_lower for keyword in nf_keywords):
+            return "no_fault"
+            
+        # Check for outside practice areas
+        outside_keywords = ['divorce', 'criminal', 'family', 'real estate', 'bankruptcy', 'immigration']
+        if any(keyword in user_lower for keyword in outside_keywords):
+            return "outside_practice"
+            
+        return "unknown"
+    
+    def get_next_response(self, user_input: str, call_id: str, conversation_history: List = None) -> str:
+        """Get the next appropriate response based on conversation flow"""
+        
+        if call_id not in self.current_state:
+            self.current_state[call_id] = self.states["initial_greeting"]
+            self.collected_info[call_id] = {}
+        
+        state = self.current_state[call_id]
+        user_lower = user_input.lower()
+        
+        # Initial greeting state
+        if state == self.states["initial_greeting"]:
+            self.current_state[call_id] = self.states["identifying_caller"]
+            case_type = self.identify_case_type(user_input)
+            
+            if case_type == "personal_injury":
+                # If they already mentioned the case type
+                if any(word in user_lower for word in ['accident', 'injured', 'car', 'truck']):
+                    self.current_state[call_id] = self.states["collecting_info"]
+                    self.collected_info[call_id]["case_type"] = "personal_injury"
+                    return "Okay got it so to confirm, you are calling about a personal injury matter, right?"
+                else:
+                    return "We appreciate you calling us at Tona Law. What kind of matter can I assist you with?"
+            elif case_type == "no_fault":
+                self.current_state[call_id] = self.states["collecting_info"]
+                self.collected_info[call_id]["case_type"] = "no_fault"
+                return "We appreciate you calling us at Tona Law. I understand you're calling about no-fault collection. What is the name of your practice?"
+            elif case_type == "outside_practice":
+                self.current_state[call_id] = self.states["outside_practice_area"]
+                return "I appreciate you calling us, but we actually don't handle these types of cases. I recommend you contact a law firm that specializes in that area. Is there anything else I can help you with?"
+            else:
+                return "We appreciate you calling us at Tona Law. What kind of matter can I assist you with?"
+        
+        # Collecting basic information
+        elif state == self.states["collecting_info"]:
+            if "case_type" not in self.collected_info[call_id]:
+                case_type = self.identify_case_type(user_input)
+                self.collected_info[call_id]["case_type"] = case_type
+                
+                if case_type == "personal_injury":
+                    return "Let me start by getting your first and last name. Do you mind spelling your full name slowly and clearly for me?"
+                elif case_type == "no_fault":
+                    return "What is the name of your practice?"
+                elif case_type == "outside_practice":
+                    self.current_state[call_id] = self.states["outside_practice_area"]
+                    return "I appreciate you calling us, but we actually don't handle these types of cases. I recommend you contact a law firm that specializes in that area. Is there anything else I can help you with?"
+            
+            elif "name" not in self.collected_info[call_id]:
+                self.collected_info[call_id]["name"] = user_input
+                return "And to confirm, is the number you are calling us from the best number to reach you at?"
+            
+            elif "phone_confirmed" not in self.collected_info[call_id]:
+                self.collected_info[call_id]["phone_confirmed"] = user_input
+                case_type = self.collected_info[call_id]["case_type"]
+                
+                if case_type == "personal_injury":
+                    self.current_state[call_id] = self.states["qualifying_personal_injury"]
+                    return "Can you briefly explain the situation?"
+                elif case_type == "no_fault":
+                    self.current_state[call_id] = self.states["qualifying_no_fault"]
+                    return "Thank you. What type of healthcare provider are you?"
+        
+        # Personal Injury Qualifying
+        elif state == self.states["qualifying_personal_injury"]:
+            if "situation" not in self.collected_info[call_id]:
+                self.collected_info[call_id]["situation"] = user_input
+                return "Where and when did the accident happen?"
+            elif "location_time" not in self.collected_info[call_id]:
+                self.collected_info[call_id]["location_time"] = user_input
+                return "Can you please describe the injuries from the accident?"
+            elif "injuries" not in self.collected_info[call_id]:
+                self.collected_info[call_id]["injuries"] = user_input
+                
+                # Check if they have injuries (qualified)
+                if any(word in user_lower for word in ['injured', 'hurt', 'pain', 'hospital', 'doctor', 'medical']):
+                    self.current_state[call_id] = self.states["qualified_ready_transfer"]
+                    return "Okay so what I'd like to do now is transfer you over to my colleague who will help you with the next steps. Again, I'm very sorry to hear about your situation but you made the right call. I'm transferring you now."
+                else:
+                    self.current_state[call_id] = self.states["not_qualified"]
+                    return "I understand. Since there were no injuries, this might not qualify for a personal injury case. However, I'd be happy to discuss other options or see if there's anything else I can help you with."
+        
+        # No-Fault Qualifying
+        elif state == self.states["qualifying_no_fault"]:
+            if "provider_type" not in self.collected_info[call_id]:
+                self.collected_info[call_id]["provider_type"] = user_input
+                return "Do you currently accept No-Fault Insurance in your practice as a form of payment?"
+            elif "accepts_no_fault" not in self.collected_info[call_id]:
+                self.collected_info[call_id]["accepts_no_fault"] = user_input
+                return "What is your estimate of the dollar amount outstanding to date in wrongly denied no fault benefits?"
+            elif "outstanding_amount" not in self.collected_info[call_id]:
+                self.collected_info[call_id]["outstanding_amount"] = user_input
+                self.current_state[call_id] = self.states["qualified_ready_transfer"]
+                return "Thank you for that information. Let me transfer you to one of our attorneys who specializes in no-fault collection cases. They'll be able to help you with the next steps."
+        
+        # Handle FAQs
+        for question, answer in TonaLawKnowledgeBase.FAQS.items():
+            if question in user_lower:
+                return answer
+        
+        # Default response
+        return "I want to make sure I understand you correctly. Could you please repeat that for me?"
+
+class GabbiVoiceEngine:
+    """Gabbi's voice presence engine with SesameAI enhancements"""
+    
+    def __init__(self):
+        self.conversation_flow = ConversationFlow()
+        self.knowledge_base = TonaLawKnowledgeBase()
+        self.personality = GabbiPersonality()
     
     def enhance_with_voice_presence(self, text: str, context: List = None, call_id: str = None) -> str:
-        """
-        Apply SesameAI voice presence principles to enhance text responses
-        """
-        if not text:
-            return text
-            
-        enhanced_text = text
+        """Apply SesameAI voice presence + Gabbi's personality"""
         
-        # 1. Emotional Intelligence - detect and respond to emotional context
+        # Apply Gabbi's personality traits
+        enhanced_text = self.personality.add_conversational_markers(text)
+        
+        # Add empathy based on context
+        if context:
+            recent_context = ' '.join([msg.get('content', '') for msg in context[-2:]])
+            enhanced_text = self.personality.add_empathy_markers(enhanced_text, recent_context)
+        
+        # Apply SesameAI emotional intelligence
         enhanced_text = self.add_emotional_intelligence(enhanced_text, context)
-        
-        # 2. Conversational Dynamics - natural timing and flow
-        enhanced_text = self.add_conversational_dynamics(enhanced_text)
-        
-        # 3. Contextual Awareness - adjust based on conversation history
-        enhanced_text = self.add_contextual_awareness(enhanced_text, context, call_id)
-        
-        # 4. Personality Consistency - maintain coherent character
-        enhanced_text = self.add_personality_consistency(enhanced_text)
         
         return enhanced_text
     
     def add_emotional_intelligence(self, text: str, context: List = None) -> str:
-        """Detect emotional cues and respond appropriately"""
+        """SesameAI emotional intelligence for legal intake"""
         if not context:
             return text
             
-        # Analyze recent conversation for emotional context
-        recent_messages = context[-3:] if len(context) >= 3 else context
-        emotional_cues = self.detect_emotional_context(recent_messages)
+        recent_content = ' '.join([msg.get('content', '') for msg in context[-2:]])
+        emotions = self.detect_emotions(recent_content)
         
-        if 'stress' in emotional_cues or 'worry' in emotional_cues:
-            text = f"I can sense this might feel overwhelming... {text} Take your time, there's no rush."
-            
-        elif 'excitement' in emotional_cues or 'joy' in emotional_cues:
-            text = f"I love your enthusiasm! {text} Your energy is contagious!"
-            
-        elif 'confusion' in emotional_cues:
+        if 'trauma' in emotions:
+            text = f"I can hear this has been really difficult for you... {text} Take your time, there's no rush."
+        elif 'frustration' in emotions:
+            text = f"I understand your frustration... {text} We're here to help make this easier for you."
+        elif 'confusion' in emotions:
             text = f"Let me help clarify this for you. {text} Does that make more sense?"
-            
-        elif 'sadness' in emotional_cues:
-            text = f"I hear you, and I want you to know I'm here for you. {text}"
+        elif 'urgency' in emotions:
+            text = f"I understand this is urgent for you. {text} We'll move as quickly as we can."
             
         return text
     
-    def detect_emotional_context(self, messages: List) -> List[str]:
-        """Simple but effective emotion detection from conversation"""
+    def detect_emotions(self, content: str) -> List[str]:
+        """Detect emotions specific to legal intake calls"""
         emotions = []
+        content_lower = content.lower()
         
-        for msg in messages:
-            content = msg.get('content', '').lower()
+        trauma_words = ['accident', 'injured', 'scared', 'traumatic', 'hospital', 'emergency']
+        if any(word in content_lower for word in trauma_words):
+            emotions.append('trauma')
             
-            # Stress/worry indicators
-            stress_words = ['stress', 'worried', 'anxious', 'overwhelmed', 'pressure', 'difficult', 'problem', 'issue']
-            if any(word in content for word in stress_words):
-                emotions.append('stress')
-                
-            # Excitement/joy indicators  
-            joy_words = ['excited', 'great', 'awesome', 'amazing', 'wonderful', 'fantastic', 'love', 'happy']
-            if any(word in content for word in joy_words):
-                emotions.append('excitement')
-                
-            # Confusion indicators
-            confusion_words = ['confused', 'understand', 'unclear', 'what', 'how', 'why', 'explain']
-            if any(word in content for word in confusion_words):
-                emotions.append('confusion')
-                
-            # Sadness indicators
-            sad_words = ['sad', 'upset', 'down', 'depressed', 'disappointed', 'hurt']
-            if any(word in content for word in sad_words):
-                emotions.append('sadness')
-                
+        frustration_words = ['frustrated', 'angry', 'denied', 'refused', 'unfair', 'ridiculous']
+        if any(word in content_lower for word in frustration_words):
+            emotions.append('frustration')
+            
+        confusion_words = ['confused', 'understand', 'explain', 'what', 'how', 'why']
+        if any(word in content_lower for word in confusion_words):
+            emotions.append('confusion')
+            
+        urgency_words = ['urgent', 'quickly', 'asap', 'immediately', 'deadline', 'statute']
+        if any(word in content_lower for word in urgency_words):
+            emotions.append('urgency')
+            
         return emotions
     
-    def add_conversational_dynamics(self, text: str) -> str:
-        """Add natural conversational flow and timing"""
-        # Add thoughtful pauses for more natural speech rhythm
-        text = text.replace('. ', '... ')
-        text = text.replace('? ', '? ')
-        text = text.replace('! ', '! ')
+    def generate_response(self, user_input: str, call_id: str, conversation_history: List = None) -> str:
+        """Generate Gabbi's response using conversation flow"""
         
-        # Add natural conversation markers occasionally
-        if len(text) > 80:
-            natural_markers = ['you know', 'actually', 'by the way', 'I think', 'honestly']
-            # Use text length to deterministically choose marker
-            marker_index = len(text) % len(natural_markers)
-            marker = natural_markers[marker_index]
-            
-            # Insert marker naturally
-            if '...' in text and marker not in text.lower():
-                text = text.replace('...', f'... {marker},', 1)
-                
-        return text
-    
-    def add_contextual_awareness(self, text: str, context: List = None, call_id: str = None) -> str:
-        """Adjust response based on conversation context and history"""
-        if not context:
-            return text
-            
-        # Get conversation history
-        history = self.conversation_memory.get(call_id, []) if call_id else []
-        total_messages = len(history) + len(context)
+        # Get base response from conversation flow
+        base_response = self.conversation_flow.get_next_response(
+            user_input, call_id, conversation_history
+        )
         
-        # Adjust based on conversation length
-        if total_messages <= 2:
-            # Early conversation - be more welcoming
-            if not any(greeting in text.lower() for greeting in ['hello', 'hi', 'hey']):
-                text = f"Welcome! {text}"
-                
-        elif total_messages > 10:
-            # Longer conversation - be more familiar
-            if len(text) > 100:
-                text = f"{text} We've been chatting for a while now - I'm really enjoying our conversation!"
-                
-        # Reference previous topics if relevant
-        if context and len(context) > 2:
-            recent_topics = [msg.get('content', '') for msg in context[-2:]]
-            if any('thank' in topic.lower() for topic in recent_topics):
-                text = f"{text} I'm genuinely happy I could help you."
-                
-        return text
-    
-    def add_personality_consistency(self, text: str) -> str:
-        """Maintain consistent personality traits throughout conversation"""
-        personality_traits = {
-            'helpful': True,
-            'empathetic': True, 
-            'curious': True,
-            'supportive': True,
-            'genuine': True
-        }
+        # Enhance with voice presence
+        enhanced_response = self.enhance_with_voice_presence(
+            base_response, conversation_history, call_id
+        )
         
-        # Ensure helpful tone
-        if personality_traits['helpful'] and len(text) > 50:
-            if not any(helper in text.lower() for helper in ['help', 'assist', 'support']):
-                text = f"{text} I'm here to help however I can!"
-                
-        # Ensure empathetic responses
-        if personality_traits['empathetic'] and '?' in text:
-            if not any(empathy in text.lower() for empathy in ['understand', 'hear', 'feel']):
-                text = f"I understand. {text}"
-                
-        return text
-    
-    def generate_contextual_response(self, user_input: str, context: List = None, call_id: str = None) -> str:
-        """Generate appropriate response based on user input and context"""
-        user_lower = user_input.lower()
-        
-        # Greeting responses
-        if any(greeting in user_lower for greeting in ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening']):
-            responses = [
-                "Hello there! I'm your AI assistant enhanced with SesameAI's voice presence technology. I'm here to have genuine conversations with you.",
-                "Hi! Great to meet you! I'm designed to understand not just your words, but the emotions and context behind them.",
-                "Hey! I'm so glad you're here. I'm an AI with advanced conversational abilities - ready to chat about whatever's on your mind!"
-            ]
-            base_response = responses[hash(user_input) % len(responses)]
-            
-        # How are you responses
-        elif any(question in user_lower for question in ['how are you', 'how do you do', 'how are things']):
-            responses = [
-                "I'm doing wonderfully, thank you for asking! I'm feeling energized and ready to help.",
-                "I'm great! Thank you for checking in. I love connecting with people through conversation.",
-                "I'm doing fantastic! There's something special about genuine conversation that really energizes me."
-            ]
-            base_response = responses[hash(user_input) % len(responses)]
-            
-        # Help requests
-        elif any(help_word in user_lower for help_word in ['help', 'assist', 'support', 'need']):
-            responses = [
-                "I'd absolutely love to help you! What's on your mind?",
-                "I'm here and ready to assist! What can I help you with today?",
-                "Of course! I'm designed to be helpful and supportive. Tell me what you need."
-            ]
-            base_response = responses[hash(user_input) % len(responses)]
-            
-        # Thank you responses
-        elif any(thanks in user_lower for thanks in ['thank', 'thanks', 'appreciate']):
-            responses = [
-                "You're so welcome! I'm genuinely happy I could help.",
-                "It's my pleasure! Helping you feels really meaningful to me.",
-                "You're very welcome! I'm glad our conversation has been helpful."
-            ]
-            base_response = responses[hash(user_input) % len(responses)]
-            
-        # Questions about capabilities/AI
-        elif any(ai_word in user_lower for ai_word in ['ai', 'artificial', 'robot', 'computer', 'sesame']):
-            base_response = "I'm an AI assistant powered by SesameAI's voice presence technology! That means I'm designed to have more natural, emotionally intelligent conversations. I try to understand not just what you're saying, but how you're feeling and what you really need."
-            
-        # Emotional expressions - positive
-        elif any(positive in user_lower for positive in ['happy', 'excited', 'great', 'wonderful', 'amazing', 'fantastic']):
-            base_response = "That's absolutely wonderful to hear! Your positive energy is infectious. I'd love to hear more about what's making you feel so good!"
-            
-        # Emotional expressions - negative
-        elif any(negative in user_lower for negative in ['sad', 'upset', 'frustrated', 'angry', 'disappointed', 'worried']):
-            base_response = "I can hear that you're going through something difficult. I want you to know that I'm here to listen and support you however I can. Would you like to talk about what's bothering you?"
-            
-        # Complex questions or topics
-        elif '?' in user_input and len(user_input) > 20:
-            base_response = "That's a really thoughtful question! Let me think about this with you. Based on what you're asking, it sounds like you're looking for a deeper understanding of this topic."
-            
-        # Default conversational responses
-        else:
-            responses = [
-                "That's really interesting! I'd love to hear more about your perspective on this.",
-                "I find that fascinating! You've got me curious - tell me more about your experience with this.",
-                "That sounds intriguing! What aspects of this are most important to you?",
-                "Wow, that's something worth exploring together! How do you feel about it?",
-                "That's a great point! I'm genuinely interested in understanding your thoughts on this better."
-            ]
-            base_response = responses[hash(user_input) % len(responses)]
-        
-        return base_response
+        return enhanced_response
 
-class SesameRetellAgent:
-    """Main agent that handles Retell AI integration"""
+class GabbiTonaLawAgent:
+    """Main Gabbi agent for Tona Law"""
     
     def __init__(self):
-        self.voice_engine = SesameVoicePresenceEngine()
+        self.voice_engine = GabbiVoiceEngine()
         self.active_calls: Dict[str, Dict] = {}
+        self.conversation_memory: Dict[str, List] = {}
     
     async def process_retell_request(self, request: dict, call_id: str) -> dict:
-        """Process incoming Retell request and generate enhanced response"""
+        """Process Retell request with Gabbi's personality and Tona Law knowledge"""
         
         interaction_type = request.get("interaction_type")
         transcript = request.get("transcript", [])
         response_id = request.get("response_id")
         
-        # Update call tracking
+        # Initialize call tracking
         if call_id not in self.active_calls:
             self.active_calls[call_id] = {
                 "start_time": time.time(),
-                "message_count": 0
+                "client_type": "unknown",
+                "qualification_status": "in_progress"
             }
         
         if interaction_type == "update_only":
             # Update conversation memory
             if transcript:
-                self.voice_engine.conversation_memory[call_id] = transcript[-10:]  # Keep last 10
+                self.conversation_memory[call_id] = transcript[-10:]
             return None
             
         elif interaction_type == "response_required":
-            # Generate response to user input
             if transcript:
                 last_message = transcript[-1]
                 user_input = last_message.get("content", "")
                 
-                # Generate base response
-                base_response = self.voice_engine.generate_contextual_response(
-                    user_input, transcript[:-1], call_id
+                # Generate Gabbi's response
+                response_content = self.voice_engine.generate_response(
+                    user_input, call_id, transcript[:-1]
                 )
-                
-                # Enhance with voice presence
-                enhanced_response = self.voice_engine.enhance_with_voice_presence(
-                    base_response, transcript[:-1], call_id
-                )
-                
-                # Update call stats
-                self.active_calls[call_id]["message_count"] += 1
                 
                 return {
                     "response_id": response_id,
-                    "content": enhanced_response,
+                    "content": response_content,
                     "content_complete": True,
                     "end_call": False
                 }
             else:
+                # First interaction - send greeting
+                greeting = self.voice_engine.conversation_flow.get_initial_greeting()
+                enhanced_greeting = self.voice_engine.enhance_with_voice_presence(greeting)
+                
                 return {
                     "response_id": response_id,
-                    "content": "I'm here and ready to chat with you! How can I help you today?",
+                    "content": enhanced_greeting,
                     "content_complete": True,
                     "end_call": False
                 }
                 
         elif interaction_type == "reminder_required":
-            # User has been quiet - gentle re-engagement
-            reminder_response = self.voice_engine.enhance_with_voice_presence(
-                "I'm still here if you'd like to continue our conversation! No pressure though - I'm happy to wait.",
-                transcript, call_id
+            reminder = "I'm still here if you need a moment to think or if you'd like to continue. Take your time."
+            enhanced_reminder = self.voice_engine.enhance_with_voice_presence(
+                reminder, transcript, call_id
             )
             
             return {
                 "response_id": response_id,
-                "content": reminder_response,
+                "content": enhanced_reminder,
                 "content_complete": True,
                 "end_call": False
             }
         
         return None
 
-# Global agent instance
-retell_agent = SesameRetellAgent()
+# Global Gabbi agent
+gabbi_agent = GabbiTonaLawAgent()
 
 @app.get("/")
 async def health_check():
     """Health check endpoint"""
     return JSONResponse({
-        "status": "🎙️ SesameAI + Retell Bridge Running Successfully",
+        "status": "🎙️ Gabbi - Tona Law AI Intake Agent Active",
+        "agent_name": "Gabbi",
+        "law_firm": "Tona Law",
         "version": "1.0.0",
         "voice_engine": "SesameAI Voice Presence Technology",
+        "practice_areas": ["Personal Injury", "No-Fault Collection"],
+        "personality": ["Warm", "Empathetic", "Expressive", "Outgoing", "Helpful"],
         "capabilities": [
-            "✅ Emotional Intelligence - Recognizes and responds to emotions",
-            "✅ Conversational Dynamics - Natural timing and flow", 
-            "✅ Contextual Awareness - Remembers conversation context",
-            "✅ Personality Consistency - Maintains coherent character",
-            "✅ Enhanced Voice Presence - Human-like conversation quality"
+            "✅ Legal Intake Qualification",
+            "✅ Empathetic Client Communication", 
+            "✅ Conversation Flow Management",
+            "✅ SesameAI Voice Presence",
+            "✅ Emotional Intelligence for Trauma-Informed Care"
         ],
         "websocket_endpoint": "/llm-websocket/{call_id}",
-        "retell_url": "wss://your-railway-domain.railway.app/llm-websocket",
-        "active_calls": len(retell_agent.active_calls)
+        "active_calls": len(gabbi_agent.active_calls)
     })
 
 @app.websocket("/llm-websocket/{call_id}")
 async def websocket_endpoint(websocket: WebSocket, call_id: str):
     """
-    Main WebSocket endpoint for Retell AI integration
-    Enhanced with SesameAI voice presence technology
+    Gabbi's WebSocket endpoint for Retell AI
     """
     await websocket.accept()
-    logger.info(f"🎙️ New SesameAI-enhanced session started: {call_id}")
+    logger.info(f"🎙️ Gabbi starting new intake call: {call_id}")
     
-    # Send initial greeting with voice presence
+    # Send initial Gabbi greeting
+    greeting = gabbi_agent.voice_engine.conversation_flow.get_initial_greeting()
+    enhanced_greeting = gabbi_agent.voice_engine.enhance_with_voice_presence(greeting)
+    
     greeting_response = {
         "response_id": 0,
-        "content": "Hey there! I'm your AI assistant enhanced with SesameAI's voice presence technology. I'm designed to have genuine, natural conversations that feel real and meaningful. How are you doing today?",
+        "content": enhanced_greeting,
         "content_complete": True,
         "end_call": False
     }
     
     await websocket.send_text(json.dumps(greeting_response))
-    logger.info(f"✅ Sent SesameAI greeting for call: {call_id}")
+    logger.info(f"✅ Gabbi sent greeting for call: {call_id}")
     
     try:
         while True:
-            # Receive message from Retell
             data = await websocket.receive_text()
             
             try:
                 request = json.loads(data)
-                logger.info(f"📨 Received request type: {request.get('interaction_type')} for call: {call_id}")
+                logger.info(f"📨 Gabbi processing: {request.get('interaction_type')} for call: {call_id}")
                 
-                # Process with SesameAI enhancement
-                response_data = await retell_agent.process_retell_request(request, call_id)
+                response_data = await gabbi_agent.process_retell_request(request, call_id)
                 
                 if response_data:
                     await websocket.send_text(json.dumps(response_data))
-                    logger.info(f"🎯 Sent SesameAI-enhanced response: {response_data.get('content', '')[:100]}...")
+                    logger.info(f"🎯 Gabbi responded: {response_data.get('content', '')[:100]}...")
                     
             except json.JSONDecodeError:
-                logger.error(f"❌ Failed to parse JSON for call: {call_id}")
+                logger.error(f"❌ JSON parse error for call: {call_id}")
                 continue
             except Exception as e:
-                logger.error(f"❌ Error processing message for call {call_id}: {e}")
+                logger.error(f"❌ Error processing call {call_id}: {e}")
                 continue
                 
     except WebSocketDisconnect:
-        logger.info(f"🔌 WebSocket disconnected for call: {call_id}")
+        logger.info(f"🔌 Gabbi call ended: {call_id}")
     except Exception as e:
         logger.error(f"❌ WebSocket error for call {call_id}: {e}")
     finally:
         # Cleanup
-        if call_id in retell_agent.voice_engine.conversation_memory:
-            del retell_agent.voice_engine.conversation_memory[call_id]
-        if call_id in retell_agent.active_calls:
-            del retell_agent.active_calls[call_id]
-        logger.info(f"🧹 Cleaned up session: {call_id}")
+        gabbi_agent.conversation_memory.pop(call_id, None)
+        gabbi_agent.active_calls.pop(call_id, None)
+        logger.info(f"🧹 Gabbi cleaned up call: {call_id}")
 
 @app.get("/stats")
 async def get_stats():
-    """Get current server statistics"""
+    """Get Gabbi's current statistics"""
     return JSONResponse({
-        "active_calls": len(retell_agent.active_calls),
-        "total_conversations": len(retell_agent.voice_engine.conversation_memory),
+        "agent_name": "Gabbi",
+        "law_firm": "Tona Law", 
+        "active_calls": len(gabbi_agent.active_calls),
         "voice_engine_status": "✅ SesameAI Voice Presence Active",
-        "uptime": "Running",
-        "call_details": retell_agent.active_calls
+        "practice_areas": ["Personal Injury", "No-Fault Collection"],
+        "call_details": gabbi_agent.active_calls
     })
 
 if __name__ == "__main__":
-    # Get port from environment (Railway sets this automatically)
     port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")
     
-    logger.info(f"🚀 Starting SesameAI + Retell Bridge on {host}:{port}")
-    logger.info("🎙️ Voice Presence Technology: ACTIVE")
-    logger.info("🧠 Emotional Intelligence: ENABLED") 
-    logger.info("💬 Conversational Dynamics: ENHANCED")
+    logger.info(f"🚀 Starting Gabbi - Tona Law AI Intake Agent on {host}:{port}")
+    logger.info("👩 Agent: Gabbi (Warm, Empathetic, Expressive)")
+    logger.info("⚖️ Law Firm: Tona Law")
+    logger.info("🎙️ Voice Technology: SesameAI Voice Presence")
+    logger.info("📋 Specialties: Personal Injury & No-Fault Collection")
     
-    # Run the server
     uvicorn.run(
         app,
         host=host,
