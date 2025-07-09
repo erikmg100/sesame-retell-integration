@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "retell_bridge.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/llm-websocket/(.*)",
+      "dest": "/retell_bridge.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/retell_bridge.py"
+    }
+  ]
+}
